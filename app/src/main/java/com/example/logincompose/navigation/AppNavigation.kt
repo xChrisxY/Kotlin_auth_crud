@@ -11,6 +11,7 @@ import com.example.logincompose.ui.CreateTaskScreen
 import com.example.logincompose.ui.UpdateTaskScreen
 import com.example.logincompose.viewmodel.HomeScreen
 import com.example.logincompose.ui.theme.LoginScreen
+import com.example.logincompose.ui.TakePhotoScreen
 import org.json.JSONObject
 
 
@@ -65,7 +66,8 @@ fun AppNavigation() {
                 username = username,
                 userId = id,
                 onCreateTaskClick = { navController.navigate("createTask/$id") },
-                onUpdateTaskClick = { taskId -> navController.navigate("updateTask/$taskId") }  // Añadido este parámetro
+                onUpdateTaskClick = { taskId -> navController.navigate("updateTask/$taskId") },
+                onTakePhotoClick = { navController.navigate("takephoto")}
             )
 
         }
@@ -100,6 +102,14 @@ fun AppNavigation() {
                 onTaskUpdated = { navController.popBackStack() },
                 onClose = { navController.popBackStack() }
             )
+        }
+
+        // Nueva pantall para tomar foto
+        composable("takephoto") {
+            TakePhotoScreen(onPhotoTaken = { photoUri ->
+                // Aquí puedes manejar la URI de la foto tomada
+                navController.popBackStack()
+            })
         }
 
     }

@@ -1,5 +1,6 @@
 package com.example.logincompose.viewmodel
 
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun HomeScreen(username: String, userId : String, onCreateTaskClick: () -> Unit, onUpdateTaskClick: (String) -> Unit) {
+fun HomeScreen(username: String, userId : String, onCreateTaskClick: () -> Unit, onUpdateTaskClick: (String) -> Unit, onTakePhotoClick: () -> Unit) {
 
     var tasks by remember { mutableStateOf<List<Task>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -62,6 +63,13 @@ fun HomeScreen(username: String, userId : String, onCreateTaskClick: () -> Unit,
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = onTakePhotoClick, // Acción para tomar foto
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "Tomar foto a una tarea")
+        }
 
         if (errorMessage != null) {
             Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error)
