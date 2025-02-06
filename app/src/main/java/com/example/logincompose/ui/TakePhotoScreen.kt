@@ -30,24 +30,24 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import java.io.File
 import java.util.concurrent.Executors
-
-import androidx.camera.core.*
-
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.viewinterop.AndroidView
-
 import androidx.compose.ui.unit.dp
-
 import android.os.Environment
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import com.example.logincompose.cloudinary.CloudinaryApi;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory
 
-
+import com.example.logincompose.model.CloudinaryResponse
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 
 @Composable
@@ -130,10 +130,18 @@ fun TakePhotoScreen(onPhotoTaken: (String) -> Unit) {
                             override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                                 val savedUri = photoFile.toURI().toString()
                                 Log.d("Camera", "Photo saved to: $savedUri")
+
                                 // [+] Ejecutamos en el hilo principal
                                 Handler(Looper.getMainLooper()).post {
                                     savePhotoToPublicDirectory(context, photoFile)
-                                    onPhotoTaken(savedUri)
+                                    uploadToCloudinary(context, photoFile) { imageUrl ->
+                                        if (imageUrl != null) {
+                                            Log.d("Cloudinary", "Uploaded successfully: $imageUrl")
+                                            onPhotoTaken(imageUrl)
+                                        } else {
+                                            Log.e("Cloudinary", "Failed to upload image")
+                                        }
+                                    }
                                 }
 
                             }
@@ -183,4 +191,47 @@ fun savePhotoToPublicDirectory(context: Context, sourceFile: File) {
         Toast.makeText(context, "Error al guardar la foto", Toast.LENGTH_SHORT).show()
     }
 }
+
+fun createCloudinaryClient(): CloudinaryApi {
+    val retrofit = Retrofit.Builder()
+        .baseUrl("https://api.cloudinary.com/v1_1/dv01nd8nv/") // Reemplaza con tu cloud name
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+    return retrofit.create(CloudinaryApi::class.java)
+}
+
+fun uploadToCloudinary(context: Context, file: File, onUploadComplete: (String?) -> Unit) {
+    val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+    val filePart = MultipartBody.Part.createFormData("file", file.name, requestBody)
+    val uploadPreset = "unsigned_preset".toRequestBody("text/plain".toMediaTypeOrNull())
+    print(uploadPreset)
+
+    val api = createCloudinaryClient()
+
+    api.uploadImage(filePart, uploadPreset).enqueue(object : Callback<CloudinaryResponse> {
+        override fun onResponse(
+            call: Call<CloudinaryResponse>,
+            response: Response<CloudinaryResponse>
+        ) {
+            if (response.isSuccessful) {
+                val url = response.body()?.secureUrl
+                Log.d("Cloudinary", "Uploaded to: $url")
+                onUploadComplete(url)
+            } else {
+                Log.e("[+] Error ||", "Aquí está el error")
+                Log.e("Cloudinary", "Upload failed: ${response.errorBody()?.string()}")
+                Log.e("[+] Error ||", "Aquí está el error")
+                onUploadComplete(null)
+            }
+        }
+
+        override fun onFailure(call: Call<CloudinaryResponse>, t: Throwable) {
+            t.printStackTrace()
+            Toast.makeText(context, "Error al subir la imagen", Toast.LENGTH_SHORT).show()
+            onUploadComplete(null)
+        }
+    })
+}
+
+
 
